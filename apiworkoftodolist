@@ -1,0 +1,2806 @@
+using FYPWORK.Model;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Timers;
+using System.Web;
+using System.Web.Http;
+
+namespace FYPWORK.Controllers
+{
+    public class FYPWORKController : ApiController
+    {
+        private const bool V = false;
+        ToDoListDatabaseDesignEntities8 db = new ToDoListDatabaseDesignEntities8();
+
+        [HttpPost]
+        public HttpResponseMessage SignUp()
+        {
+            try
+            {
+                HttpRequest request = HttpContext.Current.Request;
+
+                string UserEmail = request["UserEmail"];
+                Userss user = db.Userss.Where(s => s.email == UserEmail).FirstOrDefault();
+                if (user != null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK, "Exsist");
+                }
+
+                Userss newuser = new Userss();
+
+                newuser.email = UserEmail;
+                newuser.name = request["UserName"];
+
+                newuser.password = request["UserPassword"];
+                newuser.phonenumber = request["UserPhoneNumber"];
+
+                db.Userss.Add(newuser);
+                db.SaveChanges();
+                return Request.CreateResponse(HttpStatusCode.OK,
+                    "User Data Saved!");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                    e.InnerException != null ? e.InnerException.Message : e.Message);
+            }
+
+        }
+
+
+
+
+        [HttpGet]
+        public HttpResponseMessage GetAllUsers()
+        {
+            try
+            {
+                // Assuming you have a Userss DbSet in your DbContext
+                List<UserDto> usersData = db.Userss
+                    .Select(u => new UserDto
+                    {
+                        UserId = u.id,  // Assuming 'id' is the user ID property in your Userss class
+                        UserName = u.name,
+                        PhoneNumber = u.phonenumber
+
+                        // Add other properties as needed
+                    })
+                    .ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, usersData);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                    e.InnerException != null ? e.InnerException.Message : e.Message);
+            }
+        }
+
+        [HttpGet]
+        public HttpResponseMessage LogIn(String email, String pass)
+        {
+            try
+            {
+                var result = db.Userss.Where(
+                    use => use.email == email &&
+                    use.password == pass)
+                    .FirstOrDefault();
+                if (result != null)
+                {
+
+
+                    return Request.CreateResponse(
+                        HttpStatusCode.OK,
+                    result);
+                }
+                else
+                {
+                    return Request.CreateResponse(
+                        HttpStatusCode.InternalServerError,
+                    "Log in failed");
+                }
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+
+
+        [HttpGet]
+
+        public HttpResponseMessage ValidateEmail(string email)
+        {
+
+            var UserEmail = db.Userss.Where(u => u.email == email)
+                .Select(user => user.email)
+                .FirstOrDefault();
+            try
+            {
+                if (UserEmail != null)
+                {
+                    return Request.CreateResponse(
+                        HttpStatusCode.OK,
+                     UserEmail);
+                }
+                else
+                {
+                    return Request.CreateResponse(
+                        HttpStatusCode.InternalServerError,
+                    "Email Not Exists please Signup first!");
+                }
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+
+            }
+
+
+        }
+        [HttpPost]
+        public HttpResponseMessage UpdatePassword(string email, string newPassword)
+        {
+
+
+            var user = db.Userss.FirstOrDefault(u => u.email == email);
+            if (user != null)
+            {
+                user.password = newPassword;
+                db.SaveChanges();
+                var afterupdate = db.Userss.Where(u => u.email == email)
+                   .Select(us => new { us.password, us.email })
+                   .FirstOrDefault();
+
+
+
+
+
+                return Request.CreateResponse(HttpStatusCode.OK, afterupdate);
+            }
+            else
+            {
+                return Request.CreateResponse(HttpStatusCode.NotFound, $"User with email '{email}' not found.");
+            }
+        }
+
+
+        //[HttpPost]
+        //public HttpResponseMessage SaveTasksData(Tasks t)
+        //{
+        //    try
+        //    {
+        //        HttpRequest request = HttpContext.Current.Request;
+        //        var frind = int.Parse(request["Friends"]);
+        //        var mine = int.Parse(request["Friendof"]);
+
+        //        Tasks newuser = new Tasks();
+
+        //        newuser.TaskId = 0;
+        //        newuser.TaskTitle = request["TaskId"];
+        //        newuser.createdby = int.Parse(request["createdby"]);
+        //        newuser.Firstdate =DateTime.Parse( request["Firstdate"]);
+        //        newuser.Lastdate =DateTime.Parse( request["Lastdate"]);
+        //        newuser.TaskDueDate =DateTime.Parse( request["TaskDueDate"]);
+        //        newuser.FirstTime = DateTime.Parse(request["FirstTime"]);
+        //        newuser.LastTime = DateTime.Parse(request["LastTime"]);
+        //        newuser.TaskDueTime = DateTime.Parse(request["TaskDueTime"]);
+        //        newuser.TaskRepeat = request["TaskRepeat"];
+        //        //newuser.TasksStatus = 0;
+        //        newuser.TaskLatitude = float.Parse(request["TaskLatitude"]);
+        //        newuser.TaskLongitude = float.Parse(request["TaskLongitude"]);
+        //        newuser.Radius = 300;
+
+        //        newuser.Friends = int.Parse(request["Friends"]);
+        //        newuser.complete = false;
+        //        var realation1 = db.Friends.Where(f => f.Friendof == frind && f.Friend == mine);
+
+        //            {
+
+        //        }
+        //        db.Tasks.Add(newuser);
+        //        db.SaveChanges();
+
+        //        var lastTask = db.Tasks
+        //            .Where(tasks => tasks.createdby == t.createdby)
+        //            .OrderByDescending(tasks => tasks.TaskId)
+        //            .FirstOrDefault();
+
+        //        SharedTasks newTask = new SharedTasks();
+
+        //        newTask.Sharedid = (int)t.Friends;
+
+        //        //       Check if lastTask is not null before accessing its TaskId
+        //        newTask.TaskId = lastTask != null ? lastTask.TaskId : 0;
+
+        //        newTask.UserId = t.Friends;
+        //        newTask.ShareTaskStatus = false; // Assuming ShareTaskStatus is a boolean
+        //        newTask.ShareDateTime = DateTime.Now;
+        //        newTask.Friends = (int)t.Friends;
+
+
+
+        //        db.SharedTasks.Add(newTask);
+        //        db.SaveChanges();
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, "Tasks Data Saved!");
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+        [HttpPost]
+        public HttpResponseMessage SaveTasksData()
+        {
+            try
+            {
+                HttpRequest request = HttpContext.Current.Request;
+
+                List<int> friendIds = request["Friends"].Split(',').Select(int.Parse).ToList();
+
+                var mine = int.Parse(request["createdby"]);
+
+                Tasks newuser = new Tasks();
+
+                newuser.TaskId = 0;
+                newuser.TaskTitle = request["TaskTitle"];
+                newuser.createdby = mine;
+                newuser.TasksStatus = 1;
+
+                // Handle null value for Firstdate
+                if (DateTime.TryParse(request["Firstdate"], out DateTime firstDate))
+                {
+                    newuser.Firstdate = firstDate;
+                }
+                else
+                {
+                    newuser.Firstdate = null;
+                }
+
+                // Handle null value for Lastdate
+                if (DateTime.TryParse(request["Lastdate"], out DateTime lastDate))
+                {
+                    newuser.Lastdate = lastDate;
+                }
+                else
+                {
+                    newuser.Lastdate = null;
+                }
+
+                // Handle null value for TaskDueDate
+                if (DateTime.TryParse(request["TaskDueDate"], out DateTime taskDueDate))
+                {
+                    newuser.TaskDueDate = taskDueDate;
+                }
+                else
+                {
+                    newuser.TaskDueDate = null;
+                }
+
+                // Handle null value for FirstTime
+                if (DateTime.TryParse(request["FirstTime"], out DateTime firstTime))
+                {
+                    newuser.FirstTime = firstTime;
+                }
+                else
+                {
+                    newuser.FirstTime = null;
+                }
+
+                // Handle null value for LastTime
+                if (DateTime.TryParse(request["LastTime"], out DateTime lastTime))
+                {
+                    newuser.LastTime = lastTime;
+                }
+                else
+                {
+                    newuser.LastTime = null;
+                }
+
+                // Handle null value for TaskDueTime
+                if (DateTime.TryParse(request["TaskDueTime"], out DateTime taskDueTime))
+                {
+                    newuser.TaskDueTime = taskDueTime;
+                }
+                else
+                {
+                    newuser.TaskDueTime = null;
+                }
+
+                newuser.TaskRepeat = request["TaskRepeat"];
+
+                // Handle null value for TaskLatitude
+                if (float.TryParse(request["TaskLatitude"], out float taskLatitude))
+                {
+                    newuser.TaskLatitude = taskLatitude;
+                }
+                else
+                {
+                    newuser.TaskLatitude = null;
+                }
+
+                // Handle null value for TaskLongitude
+                if (float.TryParse(request["TaskLongitude"], out float taskLongitude))
+
+                {
+                    newuser.TaskLongitude = taskLongitude;
+                }
+                else
+                {
+                    newuser.TaskLongitude = null;
+                }
+
+                newuser.Radius = 300;
+                newuser.complete = false;
+
+
+                db.Tasks.Add(newuser);
+                db.SaveChanges();
+                // Check the friend type and set ShareTaskStatus accordingly
+                //string friendType = request["Type"];
+                for (int frindid = 0; frindid < friendIds.Count; frindid++)
+                {
+
+                    var friendId = friendIds[frindid]; // Get the current friend ID
+
+                    var Type = db.Friends
+                        .Where(f => f.Friendof == mine && f.Friend == friendId)
+                        .Select(x => x.Type)
+                        .FirstOrDefault();
+                    SharedTasks newTask = new SharedTasks();
+
+                    if (Type.Contains("Family") || Type.Contains("family"))
+                    {
+                        newTask.ShareTaskStatus = true;
+                    }
+                    else
+                    {
+                        newTask.ShareTaskStatus = false;
+                    }
+
+                    var lastTask = db.Tasks
+                        .Where(tasks => tasks.createdby == mine)
+                        .OrderByDescending(tasks => tasks.TaskId)
+                        .FirstOrDefault();
+
+                    newTask.Sharedid = (int)friendId;
+
+                    // Check if lastTask is not null before accessing its TaskId
+                    newTask.TaskId = lastTask != null ? lastTask.TaskId : 0;
+
+                    newTask.UserId = friendId;
+                    newTask.ShareDateTime = DateTime.Now;
+                    newTask.Friends = (int)friendId;
+
+                    db.SharedTasks.Add(newTask);
+                    db.SaveChanges();
+                    StartStatusCheckTimer((int)newTask.TaskId);
+                }
+                return Request.CreateResponse(HttpStatusCode.OK, "Tasks Data Saved!");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        public class ShareTasksRequest
+        {
+            public Tasks Task { get; set; }
+            public List<int> ShareWithIds { get; set; }
+            public List<string> ShareWithTypes { get; set; }
+        }
+        [HttpPost]
+        public HttpResponseMessage newSharetasks([FromBody] ShareTasksRequest shareTasksRequest)
+        {
+            try
+            {
+                Tasks task = shareTasksRequest.Task;
+                List<int> shareWithIds = shareTasksRequest.ShareWithIds;
+                List<string> shareWithTypes = shareTasksRequest.ShareWithTypes;
+
+                db.Tasks.Add(task);
+                db.SaveChanges();
+
+                if (shareWithIds.Count != shareWithTypes.Count)
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid input data.");
+                }
+
+                for (int i = 0; i < shareWithIds.Count; i++)
+                {
+                    int userId = shareWithIds[i];
+                    string type = shareWithTypes[i];
+
+                    DateTime currentDateTime = DateTime.Now;
+                    string dateString = currentDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+
+                    if (type == "Family")
+                    {
+                        db.SharedTasks.Add(new SharedTasks
+                        {
+                            TaskId = task.TaskId,
+                            UserId = userId,
+                            ShareTaskStatus = true,
+                            ShareDateTime = DateTime.Now
+                        });
+                    }
+                    else if (type == "Friend")
+                    {
+                        db.SharedTasks.Add(new SharedTasks
+                        {
+                            TaskId = task.TaskId,
+                            UserId = userId,
+                            ShareTaskStatus = false,
+                            ShareDateTime = DateTime.Now
+                        });
+
+                    }
+                    else
+                    {
+                        return Request.CreateResponse(HttpStatusCode.NotFound, "Not Share");
+                    }
+                }
+
+                db.SaveChanges();
+                return Request.CreateResponse(HttpStatusCode.OK, "Tasks Share Successfully");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+        //[HttpPost]
+        //public HttpResponseMessage SaveTasksDataa(Tasks t)
+        //{
+        //    try
+        //    {
+        //        db.Tasks.Add(t);
+        //        db.SaveChanges();
+
+        //        var lastTask = db.Tasks
+        //            .Where(tasks => tasks.createdby == t.createdby)
+        //            .OrderByDescending(tasks => tasks.TaskId)
+        //            .FirstOrDefault();
+
+        //        SharedTasks newTask = new SharedTasks();
+
+        //        newTask.Sharedid = (int)t.Friends;
+
+        //        // Check if lastTask is not null before accessing its TaskId
+        //        newTask.TaskId = lastTask != null ? lastTask.TaskId : 0;
+
+        //        newTask.UserId = t.Friends;
+
+        //        // Retrieve the type from the FriendType property
+        //        Friends newTask1 = new Friends();
+        //        string type = t.;
+
+        //        // Set ShareTaskStatus based on the type (Family or Friend)
+        //        if (type == "Family")
+        //        {
+        //            newTask.ShareTaskStatus = true;
+        //        }
+        //        else if (type == "Friend")
+        //        {
+        //            newTask.ShareTaskStatus = false;
+        //        }
+        //        else
+        //        {
+        //            return Request.CreateResponse(HttpStatusCode.NotFound, "Not Share");
+        //        }
+
+        //        newTask.ShareDateTime = DateTime.Now;
+        //        newTask.Friends = (int)t.Friends;
+
+        //        db.SharedTasks.Add(newTask);
+        //        db.SaveChanges();
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, "Tasks Data Saved!");
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+
+        [HttpPost]
+        public HttpResponseMessage SaveOWNTasksData(Tasks t)
+        {
+            try
+            {
+                db.Tasks.Add(t);
+                db.SaveChanges();
+
+                var lastTask = db.Tasks
+                    .Where(task => task.createdby == t.createdby)
+                    .OrderByDescending(task => task.TaskId)
+                    .FirstOrDefault();
+                db.SaveChanges();
+
+                return Request.CreateResponse(HttpStatusCode.OK, "Tasks Data Saved!");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+        //[HttpPost]
+        //public HttpResponseMessage SaveTasksData(Task t)
+        //{
+
+        //    try
+        //    {
+        //        db.Tasks.Add(t);
+        //        db.SaveChanges();
+        //        return Request.CreateResponse(HttpStatusCode.OK,
+        //            "Tasks Data Saved!");
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(
+        //            HttpStatusCode.InternalServerError,
+        //           e.Message);
+        //    }
+        //}
+
+
+        [HttpPost]
+        public HttpResponseMessage Sharetasks([FromUri] List<int> shareWithIds, [FromBody] Tasks task)
+        {
+            try
+            {
+                db.Tasks.Add(task);
+                db.SaveChanges();
+
+                // Associate the task with the user IDs in the "SharedTask" table
+                foreach (var userId in shareWithIds)
+                {
+                    db.SharedTasks.Add(new SharedTasks
+                    {
+                        TaskId = task.TaskId,
+                        UserId = userId,
+                        ShareTaskStatus = V,
+                        ShareDateTime = DateTime.Now,
+                        //ShareDateTime = DateTime.UtcNow
+                        Friends = (int)task.Friends
+                    });
+                }
+
+                db.SaveChanges();
+                return Request.CreateResponse(HttpStatusCode.OK,
+                   "Tasks Share Successfully");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+
+
+        [HttpPost]
+        public HttpResponseMessage ShareTasksAfter(int taskId, [FromUri] List<int> sharewithIds)
+        {
+            try
+            {
+                // Check if the task exists
+                var taskExists = db.Tasks.Any(t => t.TaskId == taskId);
+
+                if (!taskExists)
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Task not found.");
+                }
+
+                // Insert into SharedTasks table for each use
+                foreach (var userId in sharewithIds)
+                {
+                    var userExists = db.Userss.Any(u => u.id == userId);
+
+                    if (userExists)
+                    {
+                        var newSharedTask = new SharedTasks
+                        {
+                            TaskId = taskId,
+                            UserId = userId,
+                            ShareTaskStatus = V,
+                            ShareDateTime = DateTime.Now,
+                            //Friends= (int)Task.Friends
+
+                        };
+
+                        db.SharedTasks.Add(newSharedTask);
+                    }
+                }
+
+                db.SaveChanges();
+
+                return Request.CreateResponse(HttpStatusCode.OK, "Task shared with users successfully.");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+        [HttpPost]
+        public HttpResponseMessage AddFriend([FromBody] Friends model)
+        {
+            try
+            {
+                int userId = db.Userss
+                    .Where(user => user.id == model.Friendof)
+                    .Select(u => u.id)
+                    .FirstOrDefault();
+
+                int friendId = db.Userss
+                    .Where(user => user.id == model.Friend)
+                    .Select(u => u.id)
+                    .FirstOrDefault();
+
+                if (friendId == default(int))
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Friend ID not found");
+                }
+
+                var checkIfFriend = db.Friends
+                    .Where(u => u.Friend == friendId && u.Friendof == userId)
+                    .FirstOrDefault();
+
+                if (checkIfFriend == null)
+                {
+                    var friend = new Friends
+                    {
+                        Friendof = userId,
+                        Friend = friendId,
+                        Type = model.Type // Add the relationship type here (e.g., "Friends" or "Family")
+                    };
+                    db.Friends.Add(friend);
+                    db.SaveChanges();
+
+                    return Request.CreateResponse(HttpStatusCode.OK, "Friend added successfully!");
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Friend relationship already exists");
+                }
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+
+
+        //[HttpPost]
+        //public HttpResponseMessage AddFrid(int userid, string friendphonenumber)
+        //{
+        //    try
+        //    {
+
+        //        int userId = db.Usersses.Where(
+        //            user => user.id == userid)
+        //             .Select(u => u.id)
+        //           .FirstOrDefault();
+        //        int friendid = db.Usersses.Where(
+        //            user => user.phonenumber == friendphonenumber)
+        //            .Select(user => user.id).FirstOrDefault();
+        //        if (friendid != default(int))
+        //        {
+        //            var friend = new Friend
+        //            {
+        //                Friendof = userId,
+        //                Friend1 = friendid
+        //            };
+        //            db.Friends.Add(friend);
+        //            db.SaveChanges();
+        //            return Request.CreateResponse(HttpStatusCode.OK,
+        //                "friends Added Successfuly!");
+        //        }
+        //        else
+        //        {
+        //            return Request.CreateResponse(HttpStatusCode.OK,
+        //               "friends is not a user of the app");
+
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(
+        //            HttpStatusCode.InternalServerError,
+        //           e.Message);
+        //    }
+        //}
+
+        [HttpGet]
+        public HttpResponseMessage GetFriends(int userid)
+        {
+            try
+            {
+                var friendList = db.Friends
+                    .Where(f => f.Friendof == userid)
+                    .ToList();
+
+                var friendDetailsList = new List<object>();
+
+                foreach (var friend in friendList)
+                {
+                    var friendUser = db.Userss
+                        .Where(u => u.id == friend.Friend)
+                        .FirstOrDefault();
+
+                    if (friendUser != null)
+                    {
+                        var friendDetails = new
+                        {
+                            FriendId = friend.Friend, // Use the friend's ID from the Friends table
+                            FriendName = friendUser.name,
+                            FriendPhoneNumber = friendUser.phonenumber
+                        };
+
+                        friendDetailsList.Add(friendDetails);
+                    }
+                }
+
+                return Request.CreateResponse(HttpStatusCode.OK, friendDetailsList);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+
+
+        [HttpPatch]
+        public HttpResponseMessage UpdateTasksData(int taskId, Tasks updatedTask)
+        {
+            try
+            {
+                // Step 1: Retrieve the existing task from the database
+                var existingTask = db.Tasks.Find(taskId);
+
+                // Check if the task with the given taskId exists
+                if (existingTask == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound,
+                        "Task with ID " + taskId + " not found.");
+                }
+
+                // Step 2: Update the properties of the retrieved task with the new data
+                existingTask.TaskTitle = updatedTask.TaskTitle;
+                existingTask.TaskDueDate = updatedTask.TaskDueDate;
+                existingTask.TaskDueTime = updatedTask.TaskDueTime;
+                existingTask.TaskLongitude = updatedTask.TaskLongitude;
+                existingTask.TaskLatitude = updatedTask.TaskLatitude;
+                existingTask.TaskLocArea = updatedTask.TaskLocArea;
+                existingTask.TaskBeforeTime = updatedTask.TaskBeforeTime;
+                existingTask.TaskRepeat = updatedTask.TaskRepeat;
+
+
+                // Step 3: Save the changes to the database
+                db.SaveChanges();
+
+                return Request.CreateResponse(HttpStatusCode.OK, "Task updated successfully!");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+        //[HttpPost]
+        //public HttpResponseMessage newSharetasks([FromBody] ShareTasksRequest shareTasksRequest)
+        //{
+        //    try
+        //    {
+        //        Tasks task = shareTasksRequest.Task;
+        //        List<int> shareWithIds = shareTasksRequest.ShareWithIds;
+        //        List<string> shareWithTypes = shareTasksRequest.ShareWithTypes;
+
+        //        db.Tasks.Add(task);
+        //        db.SaveChanges();
+
+        //        if (shareWithIds.Count != shareWithTypes.Count)
+        //        {
+        //            return Request.CreateResponse(HttpStatusCode.BadRequest, "Invalid input data.");
+        //        }
+
+        //        for (int i = 0; i < shareWithIds.Count; i++)
+        //        {
+        //            int userId = shareWithIds[i];
+        //            string type = shareWithTypes[i];
+
+        //            DateTime currentDateTime = DateTime.Now;
+        //            string dateString = currentDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+
+        //            if (type == "Family")
+        //            {
+        //                db.SharedTasks.Add(new SharedTasks
+        //                {
+        //                    TaskId = task.TaskId,
+        //                    UserId = userId,
+        //                    ShareTaskStatus = "Accept",
+        //                    ShareDateTime = dateString
+        //                });
+        //            }
+        //            else if (type == "Friend")
+        //            {
+        //                db.SharedTasks.Add(new SharedTasks
+        //                {
+        //                    TaskId = task.TaskId,
+        //                    UserId = userId,
+        //                    ShareTaskStatus = "pending",
+        //                    ShareDateTime = dateString
+        //                });
+
+        //            }
+        //            else
+        //            {
+        //                return Request.CreateResponse(HttpStatusCode.NotFound, "Not Share");
+        //            }
+        //        }
+
+        //        // Logic from the previous GetPendingSharedTasks API
+        //        var t_data = db.SharedTasks
+        //            .Where(u => u.UserId == task.createdby && u.ShareTaskStatus == false)
+        //            .Select(x => new
+        //            {
+        //                x.Sharedid,
+        //                x.ShareDateTime,
+        //                x.t_min // replace it with t_min
+        //    })
+        //            .ToList();
+
+        //        List<int> ta_id = new List<int>();
+        //        for (int i = 0; i < t_data.Count; i++)
+        //        {
+        //            DateTime dt = t_data[i].ShareDateTime(5);
+        //            TimeSpan time = DateTime.Now.Subtract(dt);
+
+        //            int re = DateTime.Compare(t_data[i].ShareDateTime, dt);
+        //            if (re < 0)
+        //            {
+        //                ta_id.Add(t_data[i].Sharedid);
+        //            }
+        //        }
+
+        //        var pendingTaskIds = db.SharedTasks
+        //            .Where(st => st.UserId == task.createdby && st.ShareTaskStatus == false)
+        //            .Select(st => st.TaskId)
+        //            .ToList();
+
+        //        var pendingTasks = db.SharedTasks
+        //            .Where(u => u.UserId == task.createdby && u.ShareTaskStatus == false)
+        //            .Join(
+        //                db.Tasks,
+        //                sharedTask => sharedTask.TaskId,
+        //                t => t.TaskId,
+        //                (sharedTask, t) => new
+        //                {
+        //                    Task = t,
+        //                    SharedByUserId = sharedTask.UserId
+        //                })
+        //            .ToList();
+
+        //        var response = pendingTasks.Select(sharedTask => new
+        //        {
+        //            sharedTask.Task.TaskId,
+        //            sharedTask.Task.TaskTitle,
+        //            sharedTask.Task.TaskDueDate,
+        //            sharedTask.Task.Firstdate,
+        //            sharedTask.Task.Lastdate,
+        //            sharedTask.Task.TaskDueTime,
+        //            sharedTask.Task.FirstTime,
+        //            sharedTask.Task.LastTime,
+        //            sharedTask.Task.TaskBeforeTime,
+        //            sharedTask.Task.TaskRepeat,
+        //            sharedTask.Task.TasksStatus,
+        //            sharedTask.Task.Gid,
+        //            sharedTask.Task.createdby,
+        //            SharedByUsername = db.Usersses
+        //                .Where(u => u.id == sharedTask.Task.createdby)
+        //                .Select(u => u.name)
+        //                .FirstOrDefault(),
+        //            SharedByUserId = sharedTask.Task.createdby
+        //        }).ToList();
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, response);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+
+
+
+        //[HttpPatch]
+        //public HttpResponseMessage updateSharedTasksstatus(int userid,int taskid,string newtasksstatus)
+        //{
+        //    try
+        //    {
+
+        //        var sharetask = db.SharedTasks.FirstOrDefault(u => u.UserId== userid&u.TaskId==taskid);
+        //        if (sharetask != null)
+        //        { 
+
+        //            sharetask.ShareTaskStatus = true;
+
+        //            db.SaveChanges();
+        //            //var afterupdate = db..Where(u => u.UserEmail == email)
+        //            //   .Select(us => new { us.UserPassword, us.UserEmail })
+        //            //   .FirstOrDefault();
+
+
+
+
+
+        //            return Request.CreateResponse(HttpStatusCode.OK, "ShareTask status update succesfully");
+        //        }
+        //        else
+        //        {
+        //            return Request.CreateResponse(HttpStatusCode.NotFound, $"Tasks Not found.");
+        //        }
+
+
+        //       // return Request.CreateResponse(HttpStatusCode.OK, "Task deleted successfully!");
+
+        //    }catch(Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+        //[HttpPost] // Change the attribute to HttpPost
+        //public HttpResponseMessage CreateOrUpdateSharedTaskStatus(int taskid)
+        //{
+        //    try
+        //    {
+        //        var sharetask = db.SharedTasks.FirstOrDefault(u => u.TaskId == taskid);
+        //        {
+        //            sharetask.ShareTaskStatus = true;
+        //            db.SaveChanges();
+
+        //            return Request.CreateResponse(HttpStatusCode.OK, "ShareTask status updated successfully");
+        //        }
+
+
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+        [HttpPost] // Change the attribute to HttpPost
+        public HttpResponseMessage UpdateSharedTaskStatus(int taskid)
+        {
+            try
+            {
+                var sharetask = db.Tasks.FirstOrDefault(u => u.TaskId == taskid);
+
+
+                {
+                    sharetask.complete = true;
+                    db.SaveChanges();
+
+                    return Request.CreateResponse(HttpStatusCode.OK, "task status updated successfully");
+                }
+
+
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        [HttpPatch]
+        public HttpResponseMessage updateTaksstaus(int userid, int taskid, int newtasksstatus)
+        {
+            try
+            {
+
+                var task = db.Tasks.FirstOrDefault(u => u.createdby == userid & u.TaskId == taskid);
+                if (task != null)
+                {
+                    task.TasksStatus = newtasksstatus;
+                    //sharetask.ShareTaskStatus = newtasksstatus;
+
+                    db.SaveChanges();
+                    //var afterupdate = db..Where(u => u.UserEmail == email)
+                    //   .Select(us => new { us.UserPassword, us.UserEmail })
+                    //   .FirstOrDefault();
+
+                    var afterupdate = db.Tasks.Where(u => u.createdby == userid & u.TaskId == taskid).ToList();
+
+
+
+                    return Request.CreateResponse(HttpStatusCode.OK, afterupdate);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, $"Tasks Not found.");
+                }
+
+
+                // return Request.CreateResponse(HttpStatusCode.OK, "Task deleted successfully!");
+
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        [HttpPost]
+        public HttpResponseMessage DeleteTask(int taskId)
+        {
+            try
+            {
+                // Step 1: Retrieve the existing task from the database
+                var existingTask = db.Tasks.Find(taskId);
+
+                // Check if the task with the given taskId exists
+                if (existingTask == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound,
+                        "Task with ID " + taskId + " not found.");
+                }
+
+                // Step 2: Remove the task from the database
+                db.Tasks.Remove(existingTask);
+
+                // Step 3: Save the changes to the database
+                db.SaveChanges();
+
+                return Request.CreateResponse(HttpStatusCode.OK, "Task deleted successfully!");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        //[HttpGet]
+        //public HttpResponseMessage AllTasks(int userid)
+        //{
+        //    try
+        //    {
+        //        var canuser = db.Users.Where(u => u.UserId == userid).Select(u=>u.UserId);
+        //        if (canuser == null)
+        //        {
+        //            return Request.CreateResponse(HttpStatusCode.OK,
+        //           "User Doesn'tExists");
+
+        //        }
+        //        //else
+        //        //{
+        //            var ownTaskslist = db.Tasks.Where(u => u.createdby == userid && u.TasksStatus == 0&&u.TasksStatus==2).ToList();
+
+        //            var taskIds = db.SharedTasks
+        //                         .Where(u => u.UserId == userid && u.ShareTaskStatus == "Accept")
+        //                        .Select(st => st.TaskId)
+        //                        .ToList();
+
+        //            var sharedTaskslist = db.Tasks
+        //                .Where(t => taskIds.Contains(t.TaskId))
+        //                .ToList();
+
+        //            //var sharetasklist = db.SharedTasks.Where(u => u.UserId == userid && u.ShareTaskStatus == "Accept").ToList();
+        //            var AllTaskslist = ownTaskslist.Concat(sharedTaskslist).ToList();
+
+        //            return Request.CreateResponse(HttpStatusCode.OK,
+        //                AllTaskslist);
+        //        //}
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(
+        //            HttpStatusCode.InternalServerError,
+        //           e.Message);
+        //    }
+        //}
+
+        //[HttpGet]
+        //public HttpResponseMessage AllTasks(int userid)
+        //{
+        //    try
+        //    {
+        //        var canUser = db.Usersses.FirstOrDefault(u => u.id == userid);
+
+        //        if (canUser == null)
+        //        {
+        //            return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+        //        }
+
+        //        var ownTasks = db.Tasks
+        //            .Where(t => t.createdby == userid )
+        //            //&& t.TasksStatus == 0//own Task Working
+        //            .ToList();
+
+        //        var taskIds = db.SharedTasks
+        //            .Where(st => st.UserId == userid && st.ShareTaskStatus == true)
+        //            .Select(st => st.TaskId)
+        //            .ToList();
+
+        //        var sharedTasks = db.Tasks
+        //            .Where(t => taskIds.Contains(t.TaskId))
+        //            .ToList();
+
+        //        var allTasks = ownTasks.Concat(sharedTasks).ToList();
+
+        //        // Map the retrieved data to DTOs
+        //        var allTaskDTOs = allTasks.Select(t => new Task
+        //        {
+        //            TaskId = t.TaskId,
+        //            TaskTitle = t.TaskTitle,
+        //            TaskDueDate = t.TaskDueDate,
+        //            TaskDueTime = t.TaskDueTime,
+        //            TaskLongitude = t.TaskLongitude,
+        //            TaskLatitude = t.TaskLatitude,
+        //            TaskBeforeTime = t.TaskBeforeTime,
+        //            TaskRepeat = t.TaskRepeat,
+        //            TasksStatus = t.TasksStatus,
+        //            createdby = t.createdby,
+        //            Firstdate = t.Firstdate,
+        //            Lastdate = t.Lastdate,
+        //            FirstTime = t.FirstTime,
+        //            LastTime = t.LastTime,
+        //            Friends=t.Friends,
+        //            complete=t.complete
+
+
+
+
+        //            // Adjust the property mapping as needed
+        //            // Map other properties you need
+        //        }).ToList();
+
+        //        // Configure JsonSerializerSettings for indented formatting
+        //        //var jsonSettings = new JsonSerializerSettings
+        //        //{
+        //        //    Formatting = Formatting.Indented
+        //        //};
+
+        //        // Serialize the DTOs to JSON with configured settings
+        //        //  var json = JsonConvert.SerializeObject(allTaskDTOs, jsonSettings);
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, allTaskDTOs);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+        [HttpGet]
+        public HttpResponseMessage AllTasks(int userid)
+        {
+            try
+            {
+                var canUser = db.Userss.FirstOrDefault(u => u.id == userid);
+
+                if (canUser == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+                }
+
+                var ownTasks = db.Tasks
+                    .Where(t => t.createdby == userid)
+                    .OrderByDescending(t => t.TaskId) // Order in descending order, adjust as needed
+                    .ToList();
+
+                var taskIds = db.SharedTasks
+                    .Where(st => st.UserId == userid && st.ShareTaskStatus == true)
+                    .Select(st => st.TaskId)
+                    .ToList();
+
+                var sharedTasks = db.Tasks
+                    .Where(t => taskIds.Contains(t.TaskId))
+                    .OrderByDescending(t => t.TaskId) // Order in descending order, adjust as needed
+                    .ToList();
+
+                var allTasks = ownTasks.Concat(sharedTasks).ToList();
+
+                // Map the retrieved data to DTOs
+                var allTaskDTOs = allTasks.Select(t => new Tasks
+                {
+                    TaskId = t.TaskId,
+                    TaskTitle = t.TaskTitle,
+                    TaskDueDate = t.TaskDueDate,
+                    TaskDueTime = t.TaskDueTime,
+                    TaskLongitude = t.TaskLongitude,
+                    TaskLatitude = t.TaskLatitude,
+                    TaskBeforeTime = t.TaskBeforeTime,
+                    TaskRepeat = t.TaskRepeat,
+                    TasksStatus = t.TasksStatus,
+                    createdby = t.createdby,
+                    Firstdate = t.Firstdate,
+                    Lastdate = t.Lastdate,
+                    FirstTime = t.FirstTime,
+                    LastTime = t.LastTime,
+                    Friends = t.Friends,
+                    complete = t.complete
+                    // Adjust the property mapping as needed
+                    // Map other properties you need
+                }).ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, allTaskDTOs);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        [HttpGet]
+        public HttpResponseMessage CompleteTask(int userid)
+        {
+            try
+            {
+                var canUser = db.Userss.FirstOrDefault(u => u.id == userid);
+
+                if (canUser == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+                }
+                var ownTasks = db.Tasks
+                    .Where(t => t.createdby == userid && t.TasksStatus == 0 && (t.complete == true))
+                    .ToList();
+
+                // Query for shared tasks with TasksStatus equal to 1 and incomplete
+                var sharedTasks = db.Tasks
+                    .Where(t => t.createdby == userid && t.TasksStatus == 1 && (t.complete == true))
+                    .ToList();
+                //var ownTasks = db.Tasks
+                //    .Where(t => t.createdby == userid)
+                //    .OrderByDescending(t => t.complete) // Order by complete (deleted) first
+                //    .ThenByDescending(t => t.Firstdate)
+                //    .ThenByDescending(t => t.TaskDueTime)
+                //    .ToList();
+
+                //var taskIds = db.SharedTasks
+                //    .Where(st => st.UserId == userid )
+                //    .Select(st => st.TaskId)
+                //    .ToList();
+
+                //var sharedTasks = db.Tasks
+                //    .Where(t => taskIds.Contains(t.TaskId))
+                //    .OrderByDescending(t => t.complete) // Order by complete (deleted) first
+                //    .ThenByDescending(t => t.Firstdate)
+                //    .ThenByDescending(t => t.TaskDueTime)
+                //    .ToList();
+
+                var allTasks = ownTasks.Concat(sharedTasks).ToList();
+
+                // Map the retrieved data to DTOs
+                var allTaskDTOs = allTasks.Select(t => new Tasks
+                {
+                    TaskId = t.TaskId,
+                    TaskTitle = t.TaskTitle,
+                    TaskDueDate = t.TaskDueDate,
+                    TaskDueTime = t.TaskDueTime,
+                    TaskLongitude = t.TaskLongitude,
+                    TaskLatitude = t.TaskLatitude,
+                    TaskBeforeTime = t.TaskBeforeTime,
+                    TaskRepeat = t.TaskRepeat,
+                    TasksStatus = t.TasksStatus,
+                    createdby = t.createdby,
+                    Firstdate = t.Firstdate,
+                    Lastdate = t.Lastdate,
+                    FirstTime = t.FirstTime,
+                    LastTime = t.LastTime,
+                    Friends = t.Friends,
+                    // Adjust the property mapping as needed
+                    // Map other properties you need
+                }).ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, allTaskDTOs);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+        [HttpGet]
+        public HttpResponseMessage UnCompleteTask(int userid)
+        {
+            try
+            {
+                var canUser = db.Userss.FirstOrDefault(u => u.id == userid);
+
+                if (canUser == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+                }
+
+                // Query for own tasks with TasksStatus equal to 0 and incomplete
+                var ownTasks = db.Tasks
+                    .Where(t => t.createdby == userid && t.TasksStatus == 0 && (t.complete == false || t.complete == null))
+                    .ToList();
+
+                // Query for shared tasks with TasksStatus equal to 1 and incomplete
+                var sharedTasks = db.Tasks
+                    .Where(t => t.createdby == userid && t.TasksStatus == 1 && (t.complete == false || t.complete == null))
+                    .ToList();
+
+                //     var taskIds = db.SharedTasks
+                //    .Where(st => st.UserId == userid && st.ShareTaskStatus == true && st. == false)
+                //    .Select(st => st.TaskId)
+                //    .ToList();
+
+                //var sharedTasks = db.Tasks
+                //    .Where(t => taskIds.Contains(t.TaskId))
+                //    .ToList();
+
+                var allTasks = ownTasks.Concat(sharedTasks).ToList();
+
+                // Map the retrieved data to DTOs
+                var allTaskDTOs = allTasks.Select(t => new Tasks
+                {
+                    TaskId = t.TaskId,
+                    TaskTitle = t.TaskTitle,
+                    TaskDueDate = t.TaskDueDate,
+                    TaskDueTime = t.TaskDueTime,
+                    TaskLongitude = t.TaskLongitude,
+                    TaskLatitude = t.TaskLatitude,
+                    TaskBeforeTime = t.TaskBeforeTime,
+                    TaskRepeat = t.TaskRepeat,
+                    TasksStatus = t.TasksStatus,
+                    createdby = t.createdby,
+                    Firstdate = t.Firstdate,
+                    Lastdate = t.Lastdate,
+                    FirstTime = t.FirstTime,
+                    LastTime = t.LastTime,
+                    Friends = t.Friends,
+
+
+
+
+                    // Adjust the property mapping as needed
+                    // Map other properties you need
+                }).ToList();
+
+                // Configure JsonSerializerSettings for indented formatting
+                //var jsonSettings = new JsonSerializerSettings
+                //{
+                //    Formatting = Formatting.Indented
+                //};
+
+                // Serialize the DTOs to JSON with configured settings
+                //  var json = JsonConvert.SerializeObject(allTaskDTOs, jsonSettings);
+
+                return Request.CreateResponse(HttpStatusCode.OK, allTaskDTOs);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        [HttpGet]
+        public HttpResponseMessage OWNTasks(int userid)
+        {
+            try
+            {
+                var canUser = db.Userss.FirstOrDefault(u => u.id == userid);
+
+                if (canUser == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+                }
+
+                var ownTasks = db.Tasks
+                    .Where(t => t.createdby == userid
+                    && t.TasksStatus == 0)
+                    .ToList();
+
+                //var taskIds = db.SharedTasks
+                //    .Where(st => st.UserId == userid && st.ShareTaskStatus == true)
+                //    .Select(st => st.TaskId)
+                //    .ToList();
+
+                //var sharedTasks = db.Tasks
+                //    .Where(t => taskIds.Contains(t.TaskId))
+                //    .ToList();
+
+                var allTasks = ownTasks.ToList();
+
+                // Map the retrieved data to DTOs
+                var allTaskDTOs = allTasks.Select(t => new Tasks
+                {
+                    TaskId = t.TaskId,
+                    TaskTitle = t.TaskTitle,
+                    TaskDueDate = t.TaskDueDate,
+                    TaskDueTime = t.TaskDueTime,
+                    TaskLongitude = t.TaskLongitude,
+                    TaskLatitude = t.TaskLatitude,
+                    TaskBeforeTime = t.TaskBeforeTime,
+                    TaskRepeat = t.TaskRepeat,
+                    TasksStatus = t.TasksStatus,
+                    createdby = t.createdby,
+                    Firstdate = t.Firstdate,
+                    Lastdate = t.Lastdate,
+                    FirstTime = t.FirstTime,
+                    LastTime = t.LastTime,
+                    Friends = t.Friends,
+
+
+
+
+                    // Adjust the property mapping as needed
+                    // Map other properties you need
+                }).ToList();
+
+                // Configure JsonSerializerSettings for indented formatting
+                //var jsonSettings = new JsonSerializerSettings
+                //{
+                //    Formatting = Formatting.Indented
+                //};
+
+                // Serialize the DTOs to JSON with configured settings
+                //  var json = JsonConvert.SerializeObject(allTaskDTOs, jsonSettings);
+
+                return Request.CreateResponse(HttpStatusCode.OK, allTaskDTOs);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+        [HttpGet]
+        public HttpResponseMessage GetTodayTasks(int userid, DateTime dateString)
+        {
+            try
+            {
+                // Calculate the start and end of the day for the given date
+                DateTime startDate = dateString.Date;
+                DateTime endDate = startDate.AddDays(1).AddTicks(-1);
+
+                var todayTasks = db.Tasks
+                    .Where(t => t.Firstdate >= startDate && t.Firstdate <= endDate &&
+                                t.createdby == userid && (t.complete == null || t.complete == false))
+                    .OrderByDescending(t => t.Firstdate)
+                    .ThenByDescending(t => t.TaskDueTime)
+                    .ToList();
+
+                var todaySharedTasks = db.Tasks
+                    .Where(t => t.Firstdate >= startDate && t.Firstdate <= endDate &&
+                                t.createdby == userid && (t.TasksStatus == 1))
+                    .OrderByDescending(t => t.Firstdate)
+                    .ThenByDescending(t => t.TaskDueTime)
+                    .ToList();
+
+                // Merge own tasks and shared tasks into a single list
+                var allTasks = todayTasks.Concat(todaySharedTasks).ToList();
+
+                // Map the retrieved data to DTOs
+                var allTaskDTOs = allTasks.Select(t => new TaskDTO
+                {
+                    TaskId = t.TaskId,
+                    TaskTitle = t.TaskTitle,
+                    TaskDueDate = t.TaskDueDate,
+                    TaskDueTime = t.TaskDueTime,
+                    TaskLongitude = t.TaskLongitude,
+                    TaskLatitude = t.TaskLatitude,
+                    TaskBeforeTime = t.TaskBeforeTime,
+                    TaskRepeat = t.TaskRepeat,
+                    TasksStatus = t.TasksStatus,
+                    createdby = t.createdby,
+                    Firstdate = t.Firstdate,
+                    Lastdate = t.Lastdate,
+                    FirstTime = t.FirstTime,
+                    LastTime = t.LastTime,
+                    Friends = t.Friends,
+                    // Gid = t.Gid
+                }).ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, allTaskDTOs);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        //[HttpGet]
+        //public HttpResponseMessage AllTodayTask(int userid, DateTime dateString)
+        //{
+        //    try
+        //    {
+        //        var canUser = db.Users.FirstOrDefault(u => u.UserId == userid);
+        //        if (canUser == null)
+        //        { return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+        //        }
+        //        var ownTasks = db.Tasks.Where(t => t.createdby == userid && t.TasksStatus == 0 && t.TaskDueDate == dateString && t.TasksStatus == 0).OrderBy(t => t.TaskDueTime).ToList();
+
+        //        var taskIds = db.SharedTasks.Where(st => st.UserId == userid && st.ShareTaskStatus == true).Select(st => st.TaskId).ToList();
+        //        var sharedTasks = db.Tasks.Where(t => taskIds.Contains(t.TaskId) && t.TaskDueDate == dateString).OrderBy(t => t.TaskDueTime).ToList();
+        //        var allTasks = ownTasks.Concat(sharedTasks).ToList();
+        //       // Map the retrieved data to DTOs with username
+        //       var allTaskDTOs = allTasks.Select(t => new TaskDTO
+        //        {
+        //           TaskId = t.TaskId,
+        //           TaskTitle = t.TaskTitle,
+        //           TaskDueDate = t.TaskDueDate,
+        //           TaskDueTime = t.TaskDueTime,
+        //           TaskLongitude = t.TaskLongitude,
+        //           TaskLatitude = t.TaskLatitude,
+        //           TaskBeforeTime = t.TaskBeforeTime,
+        //           TaskRepeat = t.TaskRepeat,
+        //           TasksStatus = t.TasksStatus,
+        //           createdby = t.createdby,
+        //           Firstdate = t.Firstdate,
+        //           Lastdate = t.Lastdate,
+        //           FirstTime = t.FirstTime,
+        //           LastTime = t.LastTime,
+        //           Friends = t.Friends,
+
+        //           //TaskId = t.TaskId,
+        //           //TaskTitle = t.TaskTitle,
+        //           //TaskDueDate = t.TaskDueDate,
+        //           //TaskEndDate = t.TaskEndDate,
+        //           //askDueTime = t.TaskDueTime,
+        //           //TaskEndTime = t.TaskEndTime,
+        //           //TaskBeforeTime = t.TaskBeforeTime,
+        //           //TaskRepeat = t.TaskRepeat,
+        //           //TasksStatus = t.TasksStatus,
+        //           Gid = t.Gid
+        //           // createdby = t.createdby,
+        //        }).ToList();                // Add username to the DTOs
+        //        foreach (var taskDTO in allTaskDTOs)
+        //        {
+        //            var creator = db.Users.FirstOrDefault(u => u.UserId == taskDTO.createdby);
+        //            if (creator != null)
+        //            { taskDTO.CreatedByUserName = creator.UserName; }
+        //            //Check if Gid is not null           
+        //                if (taskDTO.Gid != null)
+        //                {                        // Fetch location name from Geofence table based on Gid
+        //                    var locationName = db.Geofence.FirstOrDefault(g => g.Gid == taskDTO.Gid)?.LocationName;
+        //                    //Add location name to the DTO           
+        //                    taskDTO.LocationName = locationName;
+        //                }
+        //        }
+        //        return Request.CreateResponse(HttpStatusCode.OK, allTaskDTOs);
+        //    }
+        //    catch (Exception e)
+        //    { return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message); }
+        //}
+
+
+
+        //[HttpGet]
+        //public HttpResponseMessage CompletedTasks(int userid)
+        //{
+        //    try
+        //    {
+        //        var canUser = db.Users.FirstOrDefault(u => u.UserId == userid);
+
+        //        if (canUser == null)
+        //        
+        //            return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+        //        }
+
+        //        // Retrieve completed tasks from Tasks table
+        //        var completedTasks = db.Tasks
+        //            .Where(t => t.createdby == userid && t.TasksStatus == 1)
+        //            .OrderBy(t => t.TaskDueTime)
+        //            .ToList();
+
+        //        // Retrieve completed shared tasks from SharedTasks table
+        //        var sharedTaskIds = db.SharedTasks
+        //            .Where(st => st.UserId == userid && st.ShareTaskStatus ==true )
+        //            .Select(st => st.TaskId)
+        //            .ToList();
+
+        //        var completedSharedTasks = db.Tasks
+        //            .Where(t => sharedTaskIds.Contains(t.TaskId))
+        //            .OrderBy(t => t.TaskDueTime)
+        //            .ToList();
+
+        //        // Combine both lists
+        //        var allCompletedTasks = completedTasks.Concat(completedSharedTasks).ToList();
+
+        //        // Map the retrieved data to DTOs with username
+        //        var completedTaskDTOs = allCompletedTasks.Select(t => new TaskDTO
+        //        {
+        //            TaskId = t.TaskId,
+        //            TaskTitle = t.TaskTitle,
+        //            TaskDueDate = t.TaskDueDate,
+        //            Firstdate = t.Firstdate,
+        //            Lastdate=t.Lastdate,
+        //            TaskDueTime = t.TaskDueTime,
+        //            FirstTime = t.FirstTime,
+        //            LastTime=t.LastTime,
+        //            TaskBeforeTime = t.TaskBeforeTime,
+        //            TaskRepeat = t.TaskRepeat,
+        //            TasksStatus = t.TasksStatus,
+        //            //Gid = t.Gid,
+        //            createdby = t.createdby,
+        //        }).ToList();
+
+        //        // Add username to the DTOs
+        //        foreach (var completedTaskDTO in completedTaskDTOs)
+        //        {
+        //            var creator = db.Users.FirstOrDefault(u => u.UserId == completedTaskDTO.createdby);
+        //            if (creator != null)
+        //            {
+        //                completedTaskDTO.createdby = creator.UserId;
+        //            }
+        //        }
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, completedTaskDTOs);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+
+
+        //[HttpGet]
+        //public HttpResponseMessage UnCompletedTasks(int userid)
+        //{
+        //    try
+        //    {
+        //        var canUser = db.Usersses.FirstOrDefault(u => u.id == userid);
+
+        //        if (canUser == null)
+        //        {
+        //            return Request.CreateResponse(HttpStatusCode.OK, "User Doesn't Exist");
+        //        }
+
+        //        // Retrieve completed tasks from Tasks table
+        //        var complete = db.Tasks
+        //            .Where(t => t.createdby == userid && t.TasksStatus == 0)
+        //            .ToList();
+
+        //        // Retrieve completed shared tasks from SharedTasks table
+        //        var sharedTaskIds = db.SharedTasks
+        //            .Where(st => st.UserId == userid && st.ShareTaskStatus == false)
+        //            .Select(st => st.TaskId)
+        //            .ToList();
+
+        //        var uncompletedSharedTasks = db.Tasks
+        //            .Where(t => sharedTaskIds.Contains(t.TaskId))
+        //            .ToList();
+
+        //        // Combine both lists
+        //        var allCompletedTasks = com.Concat(uncompletedSharedTasks).ToList();
+
+        //        // Map the retrieved data to DTOs with username
+        //        var completedTaskDTOs = allCompletedTasks.Select(t => new TaskDTO
+        //        {
+        //            TaskId = t.TaskId,
+        //            TaskTitle = t.TaskTitle,
+        //            TaskDueDate = t.TaskDueDate,
+        //            Firstdate = t.Firstdate,
+        //            Lastdate = t.Lastdate,
+        //            TaskDueTime = t.TaskDueTime,
+        //            FirstTime = t.FirstTime,
+        //            LastTime = t.LastTime,
+        //            TaskBeforeTime = t.TaskBeforeTime,
+        //            TaskRepeat = t.TaskRepeat,
+        //            TasksStatus = t.TasksStatus,
+        //            //Gid = t.Gid,
+        //            createdby = t.createdby,
+        //        }).ToList();
+
+        //        // Add username to the DTOs
+        //        foreach (var completedTaskDTO in completedTaskDTOs)
+        //        {
+        //            var creator = db.Users.FirstOrDefault(u => u.UserId == completedTaskDTO.createdby);
+        //            if (creator != null)
+        //            {
+        //                completedTaskDTO.createdby = creator.UserId;
+        //            }
+        //        }
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, completedTaskDTOs);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+        [HttpGet]
+        public HttpResponseMessage NotifyTasks(int userid)
+        {
+            try
+            {
+                DateTime dateString = DateTime.Now;
+                DateTime currentTime = DateTime.Now;
+                var todayTasks = db.Tasks.AsEnumerable().Where(t => t.Firstdate.Value.Date == dateString.Date && t.createdby == userid && (t.TaskDueTime.Value.Minute == currentTime.Minute && t.TaskDueTime.Value.Hour == currentTime.Hour))
+                       .OrderBy(t => t.TaskDueTime).ToList();
+                if (!todayTasks.Any())
+                    return Request.CreateResponse(HttpStatusCode.OK, todayTasks);
+
+
+                return Request.CreateResponse(HttpStatusCode.OK, todayTasks);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+
+            }
+        }
+
+        public HttpResponseMessage reNotifyTasks(int userid)
+        {
+            try
+            {
+                DateTime dateString = DateTime.Now;
+                DateTime currentTime = DateTime.Now;
+                var todayTasks = db.Tasks.AsEnumerable().Where(t => t.Firstdate.Value.Date == dateString.Date &&
+t.Firstdate.Value.Date != null
+&& t.createdby == userid && (t.TaskDueTime.Value.Minute == currentTime.Minute
+&&
+t.TaskDueTime.Value.Hour != null
+&& t.TaskDueTime.Value.Hour == currentTime.Hour))
+                       .OrderBy(t => t.TaskDueTime).ToList();
+                if (!todayTasks.Any())
+                    return Request.CreateResponse(HttpStatusCode.OK, todayTasks);
+
+
+                return Request.CreateResponse(HttpStatusCode.OK, todayTasks);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+
+            }
+        }
+
+
+        [HttpGet]
+        public HttpResponseMessage GetPendingSharedTasks(int userid)
+        {
+            try
+            {
+                // Get the taskIds with ShareTaskStatus = "pending" for the specified user
+                var pendingTaskIds = db.SharedTasks
+                    .Where(st => st.UserId == userid && st.ShareTaskStatus == V && st.t_min == null)
+                    .Select(st => st.TaskId)
+                    .ToList();
+
+                //var sharedTasks = db.Tasks
+                //    .Where(t => pendingTaskIds.Contains(t.TaskId))
+                //    .ToList();
+
+                var pendingTasks = db.SharedTasks
+                    .Where(u => u.UserId == userid && u.ShareTaskStatus == V && u.t_min == null)
+                    .Join(
+                        db.Tasks,
+                        sharedTask => sharedTask.TaskId,
+                        task => task.TaskId,
+                        (sharedTask, task) => new
+                        {
+                            Task = task,
+                            SharedByUserId = sharedTask.UserId
+                        })
+                    .ToList();
+
+                var response = pendingTasks.Select(sharedTask => new
+                {
+                    sharedTask.Task.TaskId,
+                    sharedTask.Task.TaskTitle,
+                    sharedTask.Task.TaskDueDate,
+                    sharedTask.Task.Firstdate,
+                    sharedTask.Task.Lastdate,
+                    sharedTask.Task.TaskDueTime,
+                    sharedTask.Task.FirstTime,
+                    sharedTask.Task.LastTime,
+                    sharedTask.Task.TaskBeforeTime,
+                    sharedTask.Task.TaskRepeat,
+                    sharedTask.Task.TasksStatus,
+                    sharedTask.Task.Gid,
+                    sharedTask.Task.createdby,
+                    SharedByUsername = db.Userss
+                        .Where(u => u.id == sharedTask.Task.createdby)
+                        .Select(u => u.name)
+                        .FirstOrDefault(),
+                    SharedByUserId = sharedTask.Task.createdby
+                }).ToList();
+
+
+                return Request.CreateResponse(HttpStatusCode.OK, response);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+        //[HttpGet]
+        //public HttpResponseMessage PendingSharedTasks(int userid)
+        //{
+        //    try
+        //    {
+        //        var t_data = db.SharedTasks.Where(u => u.UserId == userid && u.ShareTaskStatus == false).Select(x => new
+        //        {
+        //            x.Sharedid,
+        //            x.ShareDateTime,
+        //            x.t_min//replace it with t_min
+        //        }).ToList();
+        //        List<int> ta_id = new List<int>();
+        //        for (int i = 0; i < t_data.Count; i++)
+        //        {
+
+        //            DateTime dt = t_data[i].ShareDateTime(5);
+        //            TimeSpan time = DateTime.Now.Subtract(dt);
+
+        //            int re = DateTime.Compare(t_data[i].ShareDateTime, dt);
+        //            if (re < 0)
+        //            {
+        //                ta_id.Add(t_data[i].Sharedid);
+
+
+        //            }
+
+        //        }
+
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, response);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+
+        [HttpGet]
+        public HttpResponseMessage PendingSharedTasks(int userid)
+        {
+            try
+            {
+                // Existing logic from the new API
+                var t_data = db.SharedTasks
+                    .Where(u => u.UserId == userid && u.ShareTaskStatus == false)
+                    .Select(x => new
+                    {
+                        x.Sharedid,
+                        x.ShareDateTime,
+                        x.t_min // replace it with t_min
+                    })
+                    .ToList();
+
+                List<int> ta_id = new List<int>();
+
+                for (int i = 0; i < t_data.Count; i++)
+                {
+                    DateTime dt = t_data[i].ShareDateTime ?? DateTime.Now;
+                    dt = dt.AddMinutes(t_data[i].t_min ?? 5);
+                    TimeSpan time = DateTime.Now.Subtract(dt);
+
+                    //            DateTime dt = t_data[i].ShareDateTime(5);
+                    //            TimeSpan time = DateTime.Now.Subtract(dt);
+
+
+                    int re = DateTime.Compare(DateTime.Now, dt);
+                    if (re < 10)
+                    {
+                        ta_id.Add(t_data[i].Sharedid);
+                    }
+                }
+                var response = db.SharedTasks.Where(st => st.UserId == userid && st.ShareTaskStatus == V).Join(ta_id,
+                    x => x.TaskId,
+                    y => y,
+                    (x, y) => new
+                    {
+                        x.TaskId, x.UserId
+                    }
+
+                    ).Join(db.Tasks,
+                    x => x.TaskId,
+                    y => y.TaskId,
+                    (x, y) => new
+                    {
+                        Task = y,
+                        SharedByUserId = x.UserId
+                    }
+                    ).Select(sharedTask => new
+                    {
+                        sharedTask.Task.TaskId,
+                        sharedTask.Task.TaskTitle,
+                        sharedTask.Task.TaskDueDate,
+                        sharedTask.Task.Firstdate,
+                        sharedTask.Task.Lastdate,
+                        sharedTask.Task.TaskDueTime,
+                        sharedTask.Task.FirstTime,
+                        sharedTask.Task.LastTime,
+                        sharedTask.Task.TaskBeforeTime,
+                        sharedTask.Task.TaskRepeat,
+                        sharedTask.Task.TasksStatus,
+                        sharedTask.Task.Gid,
+                        sharedTask.Task.createdby,
+                        SharedByUsername = db.Userss
+                        .Where(u => u.id == sharedTask.Task.createdby)
+                        .Select(u => u.name)
+                        .FirstOrDefault(),
+                        SharedByUserId = sharedTask.Task.createdby
+                    }).ToList();
+
+                int c = response.Count();
+                //var pendingTaskIds = db.SharedTasks
+                //             .Where(st => st.UserId == userid && st.ShareTaskStatus == V)
+                //             .Select(st => st.TaskId)
+                //             .ToList();
+
+                //var pendingTasks = db.SharedTasks
+                //    .Where(u => u.UserId == userid && u.ShareTaskStatus == V)
+                //    .Join(
+                //        db.Tasks,
+                //        sharedTask => sharedTask.TaskId,
+                //        task => task.TaskId,
+                //        (sharedTask, task) => new
+                //        {
+                //            Task = task,
+                //            SharedByUserId = sharedTask.UserId
+                //        })
+                //    .ToList();
+
+                //var response = pendingTasks.Select(sharedTask => new
+                //{
+                //    sharedTask.Task.TaskId,
+                //    sharedTask.Task.TaskTitle,
+                //    sharedTask.Task.TaskDueDate,
+                //    sharedTask.Task.Firstdate,
+                //    sharedTask.Task.Lastdate,
+                //    sharedTask.Task.TaskDueTime,
+                //    sharedTask.Task.FirstTime,
+                //    sharedTask.Task.LastTime,
+                //    sharedTask.Task.TaskBeforeTime,
+                //    sharedTask.Task.TaskRepeat,
+                //    sharedTask.Task.TasksStatus,
+                //    sharedTask.Task.Gid,
+                //    sharedTask.Task.createdby,
+                //    SharedByUsername = db.Userss
+                //        .Where(u => u.id == sharedTask.Task.createdby)
+                //        .Select(u => u.name)
+                //        .FirstOrDefault(),
+                //    SharedByUserId = sharedTask.Task.createdby
+                //}).ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, response);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+        [HttpGet]
+        public HttpResponseMessage ShareinTasks(int userid)
+        {
+            try
+            {
+                // Get the taskIds shared with the current user
+                var sharedTasks = db.SharedTasks
+                    .Where(u => u.UserId == userid && u.ShareTaskStatus == true)
+                    .Join(
+                        db.Tasks,
+                        sharedTask => sharedTask.TaskId,
+                        task => task.TaskId,
+                        (sharedTask, task) => new
+                        {
+                            Task = task,
+                            SharedByUserId = sharedTask.UserId
+                        })
+                    .ToList();
+
+                // Order tasks by TaskDueDate and TaskDueTime in descending order
+                var response = sharedTasks
+                    .OrderByDescending(sharedTask => sharedTask.Task.TaskDueDate)
+                    .ThenByDescending(sharedTask => sharedTask.Task.TaskDueTime)
+                    .Select(sharedTask => new
+                    {
+                        sharedTask.Task.TaskId,
+                        sharedTask.Task.TaskTitle,
+                        sharedTask.Task.TaskDueDate,
+                        sharedTask.Task.TaskDueTime,
+                        sharedTask.Task.TaskLongitude,
+                        sharedTask.Task.TaskLatitude,
+                        sharedTask.Task.TaskLocArea,
+                        sharedTask.Task.TaskBeforeTime,
+                        sharedTask.Task.TaskRepeat,
+                        sharedTask.Task.TasksStatus,
+                        sharedTask.Task.createdby,
+                        sharedTask.Task.Firstdate,
+                        sharedTask.Task.Lastdate,
+                        SharedByUsername = db.Userss
+                            .Where(u => u.id == sharedTask.Task.createdby)
+                            .Select(u => u.name)
+                            .FirstOrDefault(),
+                        SharedByUserId = sharedTask.Task.createdby
+                    }).ToList();
+
+                // Directly return the tasks with shared by info
+                return Request.CreateResponse(HttpStatusCode.OK, response);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                    e.Message);
+            }
+        }
+
+
+
+
+
+
+        //[HttpGet]
+        //public HttpResponseMessage ShareinTasks(int userid)
+        //{
+        //    try
+        //    {
+        //        // Get the taskIds shared with the current user
+        //        var taskIds = db.SharedTasks
+        //            .Where(u => u.UserId == userid && u.ShareTaskStatus == "Accept")
+        //            .Select(ut => ut.TaskId)
+        //            .ToList();
+
+        //        // Get the shared tasks
+        //        var sharedTaskslist = db.Tasks
+        //            .Where(t => taskIds.Contains(t.TaskId))
+        //            .ToList();
+
+        //        // Prepare a list to hold task details with associated usernames
+        //        var taskDetailsWithUsernames = new List<object>();
+        //        foreach (var task in sharedTaskslist)
+        //        {
+        //            // Get the user id of the owner of this task
+        //            var ownerUserId = task.createdby;
+
+        //            // Get the owner's username
+        //            var ownerUsername = db.Users
+        //                .Where(u => u.UserId == ownerUserId)
+        //                .Select(u => u.UserName)
+        //                .FirstOrDefault();
+
+        //            // Prepare task details with the owner's username
+        //            var taskWithOwnerUsername = new
+        //            {
+        //                Task = task,
+        //                SharedUsernames = ownerUsername
+        //            };
+
+        //            taskDetailsWithUsernames.Add(taskWithOwnerUsername);
+        //        }
+
+
+
+
+
+
+
+        //        // Create a response object that includes both task details and usernames
+        //        var response = new
+        //        {
+        //            SharedTasksWithUsernames = taskDetailsWithUsernames
+        //        };
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, response);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(
+        //            HttpStatusCode.InternalServerError,
+        //            e.Message);
+        //    }
+        //}
+
+        [HttpPost]
+        public HttpResponseMessage SavegeofanceData(Geofence g)
+        {
+            try
+            {
+                db.Geofence.Add(g);
+                db.SaveChanges();
+
+                var lastTask = db.Geofence
+                    .Where(task => g.createdby == g.createdby)
+                    .OrderByDescending(Geofence => Geofence.Gid)
+                    .FirstOrDefault();
+
+                SharedGeofence newTask = new SharedGeofence();
+
+                newTask.ShareId = (int)g.Friends;
+
+                //       Check if lastTask is not null before accessing its TaskId
+                newTask.Gid = lastTask != null ? lastTask.Gid : 0;
+
+                newTask.UserId = g.Friends;
+                newTask.ShareGeofenceStatus = true;
+
+
+
+                // Assuming ShareTaskStatus is a boolean
+                // newTask.ShareDateTime = DateTime.Now;
+                // newTask.Friends = (int)t.Friends;
+
+
+
+
+
+                db.SharedGeofence.Add(newTask);
+                db.SaveChanges();
+
+                return Request.CreateResponse(HttpStatusCode.OK, "Tasks Data Saved!");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        [HttpPost]
+        public HttpResponseMessage SaveGeofenceData(Geofence g)
+        {
+
+            try
+            {
+                db.Geofence.Add(g);
+                db.SaveChanges();
+                return Request.CreateResponse(HttpStatusCode.OK,
+                    "Geofence  Data Saved Successfully");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+
+
+
+
+        [HttpPost]
+        public HttpResponseMessage ShareGeofence([FromUri] List<int> shareWithIds, [FromBody] Geofence geofence)
+        {
+            try
+            {
+                db.Geofence.Add(geofence);
+                db.SaveChanges();
+
+                // Associate the task with the user IDs in the "SharedTask" table
+                foreach (var userId in shareWithIds)
+                {
+                    db.SharedGeofence.Add(new SharedGeofence
+                    {
+                        //TaskId = geofence.,
+                        UserId = userId,
+                        // ShareGeofenceStatus = "pending"
+
+                    });
+                }
+
+                db.SaveChanges();
+                return Request.CreateResponse(HttpStatusCode.OK,
+                   "Geofence Share Successfully");
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+
+
+
+        [HttpGet]
+        public HttpResponseMessage AllGeofence(int userid)
+        {
+            try
+            {
+                var canuser = db.Userss.Where(u => u.id == userid).Select(u => u.id);
+                if (canuser == null)
+                {
+                    return Request.CreateResponse(HttpStatusCode.OK,
+                   "User Doesn'tExists");
+
+                }
+                else
+                {
+                    var ownGeofencelist = db.Geofence.Where(u => u.createdby == userid && u.GeofenceStatus == 0).ToList();
+
+                    var GeofenceIds = db.SharedGeofence
+                                 .Where(u => u.UserId == userid && u.ShareGeofenceStatus == true)
+                                .Select(st => st.Gid)
+                                .ToList();
+
+                    var sharedGeofencelist = db.Geofence
+                        .Where(t => GeofenceIds.Contains(t.Gid))
+                        .ToList();
+
+                    //var sharetasklist = db.SharedTasks.Where(u => u.UserId == userid && u.ShareTaskStatus == "Accept").ToList();
+                    var AllGeofencelist = ownGeofencelist.Concat(sharedGeofencelist).ToList();
+
+                    return Request.CreateResponse(HttpStatusCode.OK,
+                        AllGeofencelist);
+                }
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+
+        [HttpGet]
+        public HttpResponseMessage GetPendingSharedGeofence(int userid)
+        {
+            try
+            {
+                // Get the taskIds with ShareTaskStatus = "pending" for the specified user
+                var pendingGeofenceIds = db.SharedGeofence
+                    .Where(st => st.UserId == userid && st.ShareGeofenceStatus == false)
+                    .Select(st => st.Gid)
+                    .ToList();
+
+                // Fetch the shared tasks with the retrieved taskIds
+                var sharedTasks = db.Geofence
+                    .Where(t => pendingGeofenceIds.Contains(t.Gid))
+                    .ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, sharedTasks);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+        //[HttpGet]
+        //public HttpResponseMessage GetPendingSharedGeofence(int userid)
+        //{
+        //    try
+        //    {
+        //        DateTime now = DateTime.Now;
+        //        var pendingTaskIds=db.SharedTasks.Where(st=>st.UserId==userid && st.ShareTaskStatus==null).ToList().Where(t=>
+        //        {
+        //        DateTime shareDateTime;
+        //            if(DateTime.TryParseExact(t.ShareDateTime,"yyyy-mm-dd HH:mm:ss",null)System.Globalization.)
+        //            {
+        //            return(now-Sha)
+        //        }
+        //            )
+        //        // Get the taskIds with ShareTaskStatus = "pending" for the specified user
+        //        var pendingGeofenceIds = db.SharedGeofence
+        //            .Where(st => st.UserId == userid && st.ShareGeofenceStatus == false)
+        //            .Select(st => st.Gid)
+        //            .ToList();
+
+        //        // Fetch the shared tasks with the retrieved taskIds
+        //        var sharedTasks = db.Geofence
+        //            .Where(t => pendingGeofenceIds.Contains(t.Gid))
+        //            .ToList();
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, sharedTasks);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+
+
+        [HttpGet]
+        public HttpResponseMessage ShareinGeofence(int userid)
+        {
+            try
+            {
+                // Get the taskIds shared with the current user
+                var GeofenceIds = db.SharedGeofence
+                    .Where(u => u.UserId == userid && u.ShareGeofenceStatus == true)
+                    .Select(ut => ut.Gid)
+                    .ToList();
+
+                // Get the shared tasks
+                var sharedGeofencelist = db.Geofence
+                    .Where(t => GeofenceIds.Contains(t.Gid))
+                    .ToList();
+
+                // Prepare a list to hold task details with associated usernames
+                var taskDetailsWithUsernames = new List<object>();
+                foreach (var geofence in sharedGeofencelist)
+                {
+                    // Get the user id of the owner of this task
+                    var ownerUserId = geofence.createdby;
+
+                    // Get the owner's username
+                    var ownerUsername = db.Userss
+                        .Where(u => u.id == ownerUserId)
+                        .Select(u => u.name)
+                        .FirstOrDefault();
+
+                    // Prepare task details with the owner's username
+                    var taskWithOwnerUsername = new
+                    {
+                        Geofence = geofence,
+                        SharedUsernames = ownerUsername
+                    };
+
+                    taskDetailsWithUsernames.Add(taskWithOwnerUsername);
+                }
+
+
+
+
+
+
+
+                // Create a response object that includes both task details and usernames
+                var response = new
+                {
+                    SharedGeofence = taskDetailsWithUsernames
+                };
+
+                return Request.CreateResponse(HttpStatusCode.OK, response);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                    e.Message);
+            }
+        }
+
+        [HttpGet]
+        public HttpResponseMessage ShareoutGeofence(int userid)
+        {
+            try
+            {
+                var sharedGeofence = db.Geofence
+                    .Join(
+                        db.SharedGeofence,
+                        task => task.Gid,
+                        shared => shared.Gid,
+                        (task, shared) => new
+                        {
+                            Task = task,
+                            Shared = shared
+                        }
+                    )
+                    .Where(joined => joined.Task.createdby == userid && (joined.Task.GeofenceStatus == 1 || joined.Task.GeofenceStatus == 2))
+                    .Select(joined => new
+                    {
+                        Title=joined.Task.Title,
+                        GeofenceId = joined.Task.Gid,
+                        Longitude = joined.Task.Longitude,
+                        Latitude = joined.Task.Latitude,
+                        Radius = joined.Task.Radius,
+                        SharedWithUserId = joined.Shared.UserId,
+                        Reached = joined.Shared.Reached
+
+                    })
+                    .ToList();
+
+                var sharedTasksWithUsernames = sharedGeofence.Select(task => new
+                {
+                    GeofenceId = task.GeofenceId,
+                    Longitude = task.Longitude,
+                    Latitude = task.Latitude,
+                    Radius = task.Radius,
+                    Reached=task.Reached,
+                    Title=task.Title,
+
+                    SharedWithUserId = task.SharedWithUserId,
+
+                    SharedWithUsername = db.Userss.Where(u => u.id == task.SharedWithUserId).Select(u => u.name).FirstOrDefault()
+                }).ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, sharedTasksWithUsernames);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+        [HttpPost]
+        public HttpResponseMessage updateSharedGeofencestatus(int userid, int geofenceid, string newstatus)
+        {
+            try
+            {
+
+                var sharetask = db.SharedGeofence.FirstOrDefault(u => u.UserId == userid & u.Gid == geofenceid);
+                if (sharetask != null)
+                {
+
+                    sharetask.ShareGeofenceStatus = true;
+
+                    db.SaveChanges();
+                    //var afterupdate = db..Where(u => u.UserEmail == email)
+                    //   .Select(us => new { us.UserPassword, us.UserEmail })
+                    //   .FirstOrDefault();
+
+
+
+
+
+                    return Request.CreateResponse(HttpStatusCode.OK, "Share Geofence status updated succesfully");
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, $"Geofence Not found.");
+                }
+
+
+                // return Request.CreateResponse(HttpStatusCode.OK, "Task deleted successfully!");
+
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+        [HttpGet]
+
+        public HttpResponseMessage GetPendingSharedTasks1(int userid)
+        {
+            try
+            {
+                // Get the taskIds with ShareTaskStatus = "pending" for the specified user
+                var pendingTaskIds = db.SharedTasks
+                    .Where(st => st.UserId == userid && st.ShareTaskStatus == null)
+                    .Select(st => st.TaskId)
+                    .ToList();
+
+                //var sharedTasks = db.Tasks
+                //    .Where(t => pendingTaskIds.Contains(t.TaskId))
+                //    .ToList();
+
+                var pendingTasks = db.SharedTasks
+                    .Where(u => u.UserId == userid && u.ShareTaskStatus == false)
+                    .Join(
+                        db.Tasks,
+                        sharedTask => sharedTask.TaskId,
+                        task => task.TaskId,
+                        (sharedTask, task) => new
+                        {
+                            Task = task,
+                            SharedByUserId = sharedTask.UserId
+                        })
+                    .ToList();
+
+                var response = pendingTasks.Select(sharedTask => new
+                {
+                    sharedTask.Task.TaskId,
+                    sharedTask.Task.TaskTitle,
+                    sharedTask.Task.TaskDueDate,
+                    sharedTask.Task.Firstdate,
+                    sharedTask.Task.Lastdate,
+                    sharedTask.Task.TaskDueTime,
+                    sharedTask.Task.FirstTime,
+                    sharedTask.Task.LastTime,
+                    sharedTask.Task.TaskBeforeTime,
+                    sharedTask.Task.TaskRepeat,
+                    sharedTask.Task.TasksStatus,
+                    sharedTask.Task.Gid,
+                    sharedTask.Task.createdby,
+                    SharedByUsername = db.Users
+                        .Where(u => u.UserId == sharedTask.Task.createdby)
+                        .Select(u => u.UserName)
+                        .FirstOrDefault(),
+                    SharedByUserId = sharedTask.Task.createdby
+                }).ToList();
+
+
+                return Request.CreateResponse(HttpStatusCode.OK, response);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+
+        } 
+
+        [HttpPatch]
+        public HttpResponseMessage updategeofencestaus(int userid, int geofenceid, int newstatus)
+        {
+            try
+            {
+
+                var task = db.Geofence.FirstOrDefault(u => u.createdby == userid & u.Gid == geofenceid);
+                if (task != null)
+                {
+                    task.GeofenceStatus = newstatus;
+                    //sharetask.ShareTaskStatus = newtasksstatus;
+
+                    db.SaveChanges();
+                    //var afterupdate = db..Where(u => u.UserEmail == email)
+                    //   .Select(us => new { us.UserPassword, us.UserEmail })
+                    //   .FirstOrDefault();
+
+                    var afterupdate = db.Geofence.Where(u => u.createdby == userid & u.Gid == geofenceid).ToList();
+
+
+
+                    return Request.CreateResponse(HttpStatusCode.OK, afterupdate);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, $"Geofence Not found.");
+                }
+
+
+                // return Request.CreateResponse(HttpStatusCode.OK, "Task deleted successfully!");
+
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        //[HttpGet]
+        //public HttpResponseMessage ShareoutFanceGeoTasks(int userid)
+        //{
+        //    try
+        //    {
+        //        var sharedTasks = db.Geofence
+        //            .Join(
+        //                db.SharedGeofence,
+        //                task => task.Gid,
+        //                shared => shared.ShareId,
+        //                (task, shared) => new
+        //                {
+        //                    Task = task,
+        //                    Shared = shared
+        //                }
+        //            )
+        //            .Where(joined => joined.Task. == && (joined.Task.TasksStatus == 1 || joined.Task.TasksStatus == 2))
+        //            .Select(joined => new
+        //            {
+        //                TaskId = joined.Task.TaskId,
+        //                TaskTitle = joined.Task.TaskTitle,
+        //                SharedWithUserId = joined.Shared.UserId,
+        //                ShareTaskStatus = joined.Shared.ShareTaskStatus,
+        //                SharedOnDate = joined.Shared.ShareDateTime
+        //            })
+        //            .ToList();
+
+        //        var sharedTasksWithUsernames = sharedTasks.Select(task => new
+        //        {
+        //            TaskId = task.TaskId,
+        //            TaskTitle = task.TaskTitle,
+        //            SharedWithUserId = task.SharedWithUserId,
+        //            ShareTaskStatus = task.ShareTaskStatus,
+
+        //            SharedWithUsername = db.Userss.Where(u => u.id == task.SharedWithUserId)
+        //            .Select(u => u.name).FirstOrDefault(),
+        //            SharedOnDate = task.SharedOnDate
+        //        }).ToList();
+
+        //        return Request.CreateResponse(HttpStatusCode.OK, sharedTasksWithUsernames);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+        //    }
+        //}
+        [HttpGet]
+        public HttpResponseMessage ShareoutTasks(int userid)
+        {
+            try
+            {
+                var sharedTasks = db.Tasks
+                    .Join(
+                        db.SharedTasks,
+                        task => task.TaskId,
+                        shared => shared.TaskId,
+                        (task, shared) => new
+                        {
+                            Task = task,
+                            Shared = shared
+                        }
+                    )
+                    .Where(joined => joined.Task.createdby == userid && (joined.Task.TasksStatus == 1 || joined.Task.TasksStatus == 2))
+                    .Select(joined => new
+                    {
+                        TaskId = joined.Task.TaskId,
+                        TaskTitle = joined.Task.TaskTitle,
+                        SharedWithUserId = joined.Shared.UserId,
+                        ShareTaskStatus = joined.Shared.ShareTaskStatus,
+                        SharedOnDate = joined.Shared.ShareDateTime
+                    })
+                    .ToList();
+
+                var sharedTasksWithUsernames = sharedTasks.Select(task => new
+                {
+                    TaskId = task.TaskId,
+                    TaskTitle = task.TaskTitle,
+                    SharedWithUserId = task.SharedWithUserId,
+                    ShareTaskStatus = task.ShareTaskStatus,
+
+                    SharedWithUsername = db.Userss.Where(u => u.id == task.SharedWithUserId)
+                    .Select(u => u.name).FirstOrDefault(),
+                    SharedOnDate = task.SharedOnDate
+                }).ToList();
+
+                return Request.CreateResponse(HttpStatusCode.OK, sharedTasksWithUsernames);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+
+
+        [HttpPost]
+        public HttpResponseMessage TimeBasedTasks(int userid)
+        {
+            try
+            {
+                var TimeBasedTaskslist = db.Tasks.Where(u => u.createdby == userid && u.TaskDueDate != null
+                && u.TaskLongitude == null && u.TaskLatitude == null).ToList();
+                return Request.CreateResponse(HttpStatusCode.OK,
+                    TimeBasedTaskslist);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+        [HttpPost]
+        public HttpResponseMessage NonTimeBasedTasks(int userid)
+        {
+            try
+            {
+                var NONTimeBasedTaskslist = db.Tasks.Where(u => u.createdby == userid && u.TaskDueDate == null
+                && u.TaskLongitude != null && u.TaskLatitude != null).ToList();
+                return Request.CreateResponse(HttpStatusCode.OK,
+                    NONTimeBasedTaskslist);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+        [HttpPost]
+        public HttpResponseMessage TimeBasedwithgpsTasks(int userid)
+        {
+            try
+            {
+                var TimeBasedwithgpsTaskslist = db.Tasks.Where(u => u.createdby == userid && u.TaskDueDate != null
+                && u.TaskLongitude != null && u.TaskLatitude != null).ToList();
+                return Request.CreateResponse(HttpStatusCode.OK,
+                    TimeBasedwithgpsTaskslist);
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(
+                    HttpStatusCode.InternalServerError,
+                   e.Message);
+            }
+        }
+
+
+
+        public HttpResponseMessage CreateOrUpdateSharedTaskStatus1(int taskid)
+        {
+            try
+            {
+                var sharetask = db.SharedGeofence.FirstOrDefault(u => u.Gid == taskid);
+
+                if (sharetask != null)
+                {
+                    sharetask.Reached = true;
+                    //sharetask.t_min = 1;
+                    db.SaveChanges();
+                    return Request.CreateResponse(HttpStatusCode.OK, "ShareTask status updated successfully");
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "Task not found");
+                }
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+
+
+
+
+
+        private static Timer statusCheckTimer;
+
+        [HttpPost]
+        public HttpResponseMessage CreateOrUpdateSharedTaskStatus(int taskid)
+        {
+            try
+            {
+                var sharetask = db.SharedTasks.FirstOrDefault(u => u.TaskId == taskid);
+
+                if (sharetask != null)
+                {
+                    sharetask.ShareTaskStatus = true;
+                    sharetask.t_min = 1;
+                    db.SaveChanges();
+                    return Request.CreateResponse(HttpStatusCode.OK, "ShareTask status updated successfully");
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.NotFound, "Task not found");
+                }
+            }
+            catch (Exception e)
+            {
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, e.Message);
+            }
+        }
+
+        private void StartStatusCheckTimer(int taskid)
+        {
+            // Set up the timer with an interval of, for example, 1 minute
+            statusCheckTimer = new Timer(60000); // 1 minute in milliseconds
+            statusCheckTimer.Elapsed += async (sender, e) => await CheckAndUpdateStatus(taskid);
+            statusCheckTimer.AutoReset = false; // Set to false for a one-time timer
+            statusCheckTimer.Start();
+        }
+
+        private async Task CheckAndUpdateStatus(int taskid)
+        {
+            SharedTasks sharetask = db.SharedTasks.FirstOrDefault(u => u.TaskId == taskid);
+
+            if (sharetask.t_min==null)
+            {
+                if (sharetask.ShareTaskStatus!=null)
+                {
+                    sharetask.t_min = 3;
+                    db.SaveChanges();
+                }
+                else
+                {
+                    sharetask.t_min = 3;
+                    db.SaveChanges();
+                }
+            }
+            else
+            {
+                // Task not found, handle as needed
+            }
+        }
+    
+
+}
+}
